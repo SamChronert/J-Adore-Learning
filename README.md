@@ -1,53 +1,61 @@
-# 🍷 SipSchool - Wine Learning App
+# 🍷 SipSchool - Intelligent Wine Learning Platform
 
 A sophisticated flashcard-based wine education platform designed to help enthusiasts achieve expert-level knowledge equivalent to WSET Level 3 certification and Master Sommelier level, without the cost of formal courses.
 
-## ✨ Features
+## 🎯 Project Vision
 
-### Current (v1.1.0)
-- ✅ **50 Expert Wine Questions** across 9 categories
-- ✅ **Interactive Flashcard Interface** with show/hide answers
-- ✅ **Progress Persistence** with localStorage
-- ✅ **Category Filtering** - study specific wine topics
-- ✅ **Difficulty Levels** - basic, intermediate, advanced
-- ✅ **Performance Tracking** - accuracy by category
-- ✅ **Mobile-Responsive Design** - works on all devices
-- ✅ **Wine-Themed UI** - elegant purple-to-red gradient
+SipSchool aims to democratize wine education by providing:
+- **Intelligent Learning**: AI-powered adaptive questions and spaced repetition
+- **Professional Knowledge**: Content equivalent to WSET Level 3 and Master Sommelier certifications
+- **Personalized Experience**: Placement tests, progress tracking, and customized learning paths
+- **Social Learning**: Share progress with friends and learn together
 
-### Coming Soon (Next Phase)
-- 🚧 **User Authentication** - secure accounts with JWT
-- 🚧 **SQLite Database** - persistent progress tracking
-- 🚧 **Spaced Repetition** - intelligent review scheduling
-- 🚧 **Placement Test** - determine starting knowledge level
-- 🚧 **Study Analytics** - detailed progress insights
+## ✨ Current Features (v1.1.0)
 
-### Future Features
-- 🔮 **AI-Powered Questions** - dynamic generation with Claude API
-- 🔮 **Interactive Wine Maps** - study by region
-- 🔮 **Achievement System** - WSET/Master Som milestones
-- 🔮 **Multi-Modal Learning** - images, maps, audio
+### ✅ Implemented
+- **50 Expert Wine Questions** across 9 comprehensive categories
+- **User Authentication System** with JWT tokens and guest mode
+- **Interactive Flashcard Interface** with show/hide answers
+- **Progress Persistence** with database storage for registered users
+- **Category Filtering** to focus on specific wine topics
+- **Difficulty Levels** (basic, intermediate, advanced)
+- **Performance Tracking** with category-specific analytics
+- **Mobile-Responsive Design** optimized for all devices
+- **Professional Architecture** with separate frontend/backend
+
+### 🚧 In Development (Phase 2)
+- **Natural Language Answer Input** - Type answers instead of clicking buttons
+- **Placement Test** - 20-question assessment to determine starting level
+- **Spaced Repetition Algorithm** - Science-based review scheduling
+- **Progressive Hint System** - Contextual hints based on attempts
+- **Answer Variations** - Accept synonyms and alternate spellings
+
+### 🔮 Future Features (Phase 3-4)
+- **AI-Powered Questions** - Dynamic generation using Claude API
+- **Interactive Wine Maps** - Visual learning by region
+- **Achievement System** - Milestones tied to certifications
+- **Voice Input** - Speak your answers
+- **Multi-Modal Learning** - Images, maps, and audio
+- **Friend Sharing** - Study groups and progress comparison
 
 ## 🏗️ Tech Stack
 
 - **Frontend**: React 18, Vite, Tailwind CSS
 - **Backend**: Node.js, Express, SQLite
-- **Authentication**: JWT, bcrypt
+- **Authentication**: JWT tokens with bcrypt
+- **AI Integration**: Claude API (planned)
 - **Development**: Nodemon, Concurrently
 - **Deployment**: Replit, GitHub
 
 ## 🚀 Quick Start
 
-### Option 1: Replit (Recommended)
-1. Fork this repository on GitHub
-2. Import to Replit from GitHub
-3. Run setup and start:
-   ```bash
-   npm run setup
-   npm run dev
-   ```
-4. Open the preview window to use the app
+### Prerequisites
+- Node.js 16+ 
+- npm or yarn
+- Git
 
-### Option 2: Local Development
+### Installation
+
 1. **Clone the repository**:
    ```bash
    git clone https://github.com/yourusername/SipSchool.git
@@ -65,256 +73,257 @@ A sophisticated flashcard-based wine education platform designed to help enthusi
    # Edit .env with your configuration
    ```
 
-4. **Start development server**:
+4. **Initialize the database**:
+   ```bash
+   npm run db:init
+   ```
+
+5. **Start development server**:
    ```bash
    npm run dev
    ```
 
-5. **Open in browser**: http://localhost:3001
+6. **Open in browser**: http://localhost:3001
+
+### Test Credentials (Development)
+- **Username**: wine_lover
+- **Password**: test123
 
 ## 📁 Project Structure
 
 ```
 SipSchool/
-├── 📄 README.md                    # This file
+├── 📄 README.md                    # Project overview (this file)
+├── 📄 ROADMAP.md                   # Development roadmap
+├── 📄 CHANGELOG.md                 # Version history
 ├── 📄 package.json                 # Server dependencies
-├── 📄 .env                         # Environment variables
-├── 📄 .gitignore                   # Git exclusions
-├── 📄 .replit                      # Replit configuration
+├── 📄 .env                         # Environment configuration
 ├── 📂 server/                      # Backend code
-│   ├── 📄 index.js                 # Main server file (50 questions)
-│   ├── 📄 database.js              # SQLite database setup
-│   └── 📄 auth.js                  # Authentication system
-├── 📂 client/                      # Frontend code
+│   ├── 📄 index.js                 # Express server (50 questions)
+│   ├── 📄 database.js              # SQLite database service
+│   ├── 📄 auth.js                  # JWT authentication
+│   └── 📄 initDb.js                # Database initialization
+├── 📂 client/                      # Frontend React app
 │   ├── 📄 package.json             # Client dependencies
-│   ├── 📄 index.html               # HTML template
-│   ├── 📄 vite.config.js           # Vite configuration
-│   ├── 📄 tailwind.config.js       # Tailwind setup
 │   ├── 📂 src/                     # React source code
-│   │   ├── 📄 main.jsx              # React entry point
-│   │   ├── 📄 App.jsx               # Main component (enhanced)
-│   │   ├── 📄 App.css               # Component styles
-│   │   └── 📄 index.css             # Global styles
+│   │   ├── 📄 App.jsx              # Main application
+│   │   ├── 📂 components/          # React components
+│   │   └── 📂 contexts/            # React contexts
 │   └── 📂 public/                  # Static assets
-│       └── 📄 wine-glass.svg        # App icon
-├── 📂 data/                        # Database files (auto-created)
-└── 📂 docs/                        # Project documentation
-    ├── 📄 PROJECT_SUMMARY.md       # Development overview
-    ├── 📄 DEVELOPMENT_LOG.md       # Session logs
-    └── 📄 requirements/             # Feature specifications
+├── 📂 data/                        # SQLite database files
+├── 📂 documents/                   # Project documentation
+│   ├── 📄 requirements/            # Original requirements
+│   ├── 📄 design/                  # Design specifications
+│   └── 📄 development/             # Development logs
+└── 📂 scripts/                     # Utility scripts
 ```
 
-## 🍷 Wine Knowledge Categories
+## 🍷 Learning Content
 
-The app covers 9 comprehensive wine education categories:
+### 9 Wine Knowledge Categories
 
-1. **Grape Varieties** (8 questions) - Primary grapes and their characteristics
-2. **Wine Regions** (12 questions) - Global wine geography and appellations
-3. **Viticulture** (6 questions) - Vineyard management and terroir
-4. **Winemaking** (6 questions) - Production techniques and processes
-5. **Tasting & Analysis** (5 questions) - Sensory evaluation skills
-6. **Wine Service** (4 questions) - Professional service standards
-7. **Food Pairing** (3 questions) - Wine and cuisine combinations
-8. **Wine Laws** (3 questions) - Classification systems and regulations
-9. **Special Wines** (3 questions) - Sparkling, fortified, and dessert wines
+1. **Grape Varieties** (8 questions)
+   - Major international varieties
+   - Regional specialties
+   - Grape characteristics
 
-## 🎯 Learning Progression
+2. **Wine Regions** (12 questions)
+   - Old World classics
+   - New World innovations
+   - Terroir and appellations
 
-### Difficulty Levels
-- **Basic**: Recognition and recall (foundational knowledge)
-- **Intermediate**: Application and analysis (working professional level)
-- **Advanced**: Synthesis and evaluation (expert/sommelier level)
+3. **Viticulture** (6 questions)
+   - Vineyard management
+   - Climate and soil
+   - Sustainable practices
+
+4. **Winemaking** (6 questions)
+   - Production techniques
+   - Fermentation processes
+   - Aging methods
+
+5. **Tasting & Analysis** (5 questions)
+   - Sensory evaluation
+   - Wine faults
+   - Professional tasting
+
+6. **Wine Service** (4 questions)
+   - Proper temperatures
+   - Decanting techniques
+   - Storage conditions
+
+7. **Food Pairing** (3 questions)
+   - Classic combinations
+   - Pairing principles
+   - Regional matches
+
+8. **Wine Laws** (3 questions)
+   - Classification systems
+   - Appellation rules
+   - Label regulations
+
+9. **Special Wines** (3 questions)
+   - Sparkling wines
+   - Fortified wines
+   - Dessert wines
+
+## 🎓 Learning Methodology
+
+### Adaptive Learning System
+- **No Visible Levels**: Seamless progression based on performance
+- **Category Mastery**: Independent tracking across all 9 categories
+- **Smart Review**: Questions appear when you're about to forget them
+- **Personalized Path**: Algorithm adapts to your strengths and weaknesses
 
 ### Target Certifications
-- **WSET Level 1-2**: Foundation wine knowledge
-- **WSET Level 3**: Advanced wine professional
-- **Master Sommelier Level 1**: Service and theory
-- **Industry Professional**: Practical wine expertise
+- **WSET Level 1-3**: Wine & Spirit Education Trust standards
+- **Court of Master Sommeliers**: Introductory to Advanced levels
+- **Industry Professional**: Practical knowledge for wine careers
 
 ## 🛠️ Development Commands
 
 ```bash
-# Setup (install all dependencies)
+# Install dependencies
 npm run setup
 
-# Development (start both server and client)
+# Development mode (frontend + backend)
 npm run dev
-
-# Server only
-npm run server
-
-# Client only
-npm run client
 
 # Production build
 npm run build
 
-# Start production server
-npm start
+# Database management
+npm run db:init          # Initialize database
+npm run db:reset         # Reset database
+npm run db:backup        # Backup database
 
-# Initialize database (future feature)
-npm run db:init
+# Run tests
+npm test
 ```
 
-## 🔧 Environment Configuration
+## 📊 API Documentation
 
-Create a `.env` file with these variables:
+### Public Endpoints
+```
+GET  /api/health                     # Server health check
+GET  /api/questions                  # All questions
+GET  /api/questions/category/:name   # Filter by category
+GET  /api/questions/difficulty/:level # Filter by difficulty
+GET  /api/questions/random/:count    # Random questions
+GET  /api/categories                 # Category statistics
+```
+
+### Authentication Endpoints
+```
+POST /api/auth/register              # Create account
+POST /api/auth/login                 # User login
+POST /api/auth/guest                 # Guest session
+POST /api/auth/logout                # End session
+GET  /api/auth/verify                # Verify token
+```
+
+### Protected Endpoints
+```
+GET  /api/progress                   # User progress
+POST /api/progress/update            # Update progress
+POST /api/sessions/start             # Start study session
+POST /api/sessions/:id/end           # End study session
+GET  /api/stats                      # Learning statistics
+```
+
+## 🔧 Environment Variables
 
 ```bash
-# Required
+# Server Configuration
 NODE_ENV=development
 PORT=3001
-JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
 
-# Optional
+# Database
 DATABASE_URL=./data/sipschool.db
-RATE_LIMIT_MAX_REQUESTS=100
+
+# Authentication
+JWT_SECRET=your_super_secret_key_min_32_chars
+SESSION_EXPIRE_HOURS=168
+GUEST_SESSION_EXPIRE_HOURS=24
+
+# Features
 ENABLE_USER_REGISTRATION=true
 ENABLE_GUEST_MODE=true
+ENABLE_SPACED_REPETITION=true
+
+# API Keys (Future)
+CLAUDE_API_KEY=your_claude_api_key
 ```
-
-## 📊 API Endpoints
-
-### Current Endpoints
-```
-GET  /api/health                    # Server status
-GET  /api/questions                 # All 50 questions
-GET  /api/questions/category/:name  # Filter by category
-GET  /api/questions/difficulty/:level # Filter by difficulty
-GET  /api/questions/random/:count   # Random question subset
-GET  /api/categories                # Available categories with stats
-```
-
-### Future Authentication Endpoints
-```
-POST /api/auth/register             # Create account
-POST /api/auth/login                # User login
-POST /api/auth/guest                # Guest session
-GET  /api/auth/verify               # Verify token
-POST /api/auth/logout               # End session
-```
-
-## 🧪 Testing
-
-### Manual Testing Checklist
-- [ ] App loads without errors
-- [ ] All 50 questions display correctly
-- [ ] Show/hide answer functionality works
-- [ ] Score tracking persists between sessions
-- [ ] Category filtering functions properly
-- [ ] Progress indicators update correctly
-- [ ] Mobile layout is responsive
-- [ ] Performance is smooth on all devices
-
-### Test on Multiple Devices
-- [ ] Desktop Chrome/Firefox/Safari
-- [ ] Mobile Chrome/Safari
-- [ ] Tablet landscape/portrait
-- [ ] Different screen resolutions
 
 ## 🚀 Deployment
 
 ### Replit Deployment
-1. Import project from GitHub
-2. Replit auto-detects Node.js
+1. Import from GitHub
+2. Set environment variables
 3. Run `npm run setup`
-4. Click "Run" or use `npm run dev`
-5. Share the generated URL
+4. Deploy with Replit's button
 
-### Production Considerations
-- Set `NODE_ENV=production`
-- Use strong JWT secrets
-- Enable rate limiting
-- Set up proper error logging
-- Configure database backups
+### Production Checklist
+- [ ] Set strong JWT secret
+- [ ] Enable HTTPS only
+- [ ] Configure CORS properly
+- [ ] Set up database backups
+- [ ] Monitor error logs
+- [ ] Configure rate limiting
 
 ## 🤝 Contributing
 
-This is currently a personal learning project, but feedback is welcome!
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
-### Providing Feedback
-- Test the app and report bugs
-- Suggest wine questions or corrections
-- Recommend feature improvements
-- Share user experience insights
+### Development Process
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
 
-### Question Quality Standards
-- All wine facts must be verifiable
-- Questions should progress logically in difficulty
-- Global wine regions should be represented
-- Industry relevance is prioritized
+### Code Standards
+- Use ESLint configuration
+- Follow React best practices
+- Write clear commit messages
+- Document new features
 
-## 📚 Educational Philosophy
+## 📈 Project Status
 
-### Learning Principles
-- **Spaced Repetition**: Review questions at optimal intervals
-- **Progressive Difficulty**: Build knowledge systematically
-- **Practical Application**: Focus on real-world wine scenarios
-- **Comprehensive Coverage**: All aspects of wine knowledge
+### Current Phase: Enhanced Learning Mechanics
+- ✅ Authentication system complete
+- ✅ Database architecture ready
+- 🚧 Text answer input in progress
+- 🚧 Spaced repetition algorithm
+- 🚧 Placement test implementation
 
-### Target Audience
-- Wine enthusiasts seeking certification-level knowledge
-- Restaurant professionals needing wine expertise
-- Sommelier certification candidates
-- Anyone passionate about wine education
+### Next Phases
+1. **AI Integration**: Claude API for dynamic questions
+2. **Visual Learning**: Interactive maps and images
+3. **Social Features**: Friend sharing and study groups
+4. **Mobile Apps**: iOS and Android versions
 
-## 🎖️ Certifications Supported
+## 📚 Documentation
 
-### WSET (Wine & Spirit Education Trust)
-- **Level 1**: Basic wine knowledge (foundation)
-- **Level 2**: Intermediate wine knowledge (enthusiast)
-- **Level 3**: Advanced wine knowledge (professional)
-
-### Court of Master Sommeliers
-- **Level 1**: Introductory sommelier course
-- **Certified Sommelier**: Professional wine service
-- **Advanced Sommelier**: Expert-level knowledge
-
-## 🔮 Roadmap
-
-### Phase 2: Enhanced Features (Weeks 2-3)
-- User authentication and profiles
-- SQLite database with progress tracking
-- Spaced repetition algorithm
-- 20-question placement test
-
-### Phase 3: AI Integration (Weeks 3-4)
-- Claude API for dynamic question generation
-- Intelligent answer processing
-- Adaptive difficulty adjustment
-- Progressive hint system
-
-### Phase 4: Advanced Features (Weeks 4-6)
-- Interactive wine region maps
-- Detailed progress analytics
-- Achievement system
-- Study session insights
-
-### Phase 5: Professional Features (Months 2-3)
-- Multi-modal content (images, audio)
-- Certification tracking
-- Professional sommelier modules
-- Industry expert content
-
-## 📞 Support
-
-- **GitHub Issues**: Report bugs and request features
-- **Documentation**: Check the `/docs` folder for detailed guides
-- **Development Log**: See `DEVELOPMENT_LOG.md` for session notes
-
-## 📄 License
-
-MIT License - see LICENSE file for details
+- [Development Roadmap](ROADMAP.md)
+- [API Documentation](docs/API.md)
+- [Design Specifications](documents/design/)
+- [Development Logs](documents/development/)
+- [Original Requirements](documents/requirements/)
 
 ## 🙏 Acknowledgments
 
-- **Wine Education**: WSET and Court of Master Sommeliers standards
+- **Wine Standards**: WSET and Court of Master Sommeliers
+- **Design Inspiration**: Modern education platforms
 - **Technical Stack**: React, Node.js, and open-source community
-- **AI Assistance**: Claude (Anthropic) for development guidance
-- **Platform**: Replit for hosting and development environment
+- **AI Partnership**: Claude (Anthropic) for development guidance
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) file for details
 
 ---
 
-**Ready to master wine knowledge?** 🍷
+**Ready to become a wine expert?** 🍷
 
-Start your wine education journey today with SipSchool!
+Start your journey today with SipSchool - where wine education meets intelligent technology.

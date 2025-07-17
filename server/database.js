@@ -29,6 +29,10 @@ class Database {
     });
   }
 
+  async init() {
+    return this.connect();
+  }
+
   async initializeTables() {
     return new Promise((resolve, reject) => {
       const tables = [
@@ -43,7 +47,7 @@ class Database {
           settings JSON DEFAULT '{}'
         )`,
 
-        // User progress table
+        // User progress table - Enhanced with spaced repetition fields
         `CREATE TABLE IF NOT EXISTS user_progress (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           user_id INTEGER NOT NULL,
@@ -182,15 +186,19 @@ class Database {
           const newCorrect = row.correct_count + (isCorrect ? 1 : 0);
           
           // Calculate next review using spaced repetition
-          const nextReview = this.calculateNextReview(row, isCorrect);
+          const { nextReview, newInterval, newEaseFactor } = this.calculateSpacedRepetition(row, isCorrect);
           
           const updateSql = `
             UPDATE user_progress 
-            SET attempts = ?, correct_count = ?, last_attempt = ?, next_review = ?
+            SET attempts = ?, correct_count = ?, last_attempt = ?, 
+                next_review = ?, interval_days = ?, ease_factor = ?
             WHERE user_id = ? AND question_id = ?
           `;
           
-          this.db.run(updateSql, [newAttempts, newCorrect, now, nextReview, userId, questionId], (err) => {
+          this.db.run(updateSql, [
+            newAttempts, newCorrect, now, nextReview, newInterval, newEaseFactor, 
+            userId, questionId
+          ], (err) => {
             if (err) {
               reject(err);
             } else {
@@ -199,16 +207,18 @@ class Database {
           });
         } else {
           // Create new progress record
-          const nextReview = this.calculateNextReview(null, isCorrect);
+          const { nextReview, newInterval, newEaseFactor } = this.calculateSpacedRepetition(null, isCorrect);
           
           const insertSql = `
             INSERT INTO user_progress 
-            (user_id, question_id, attempts, correct_count, first_attempt, last_attempt, category, difficulty, next_review)
-            VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?)
+            (user_id, question_id, attempts, correct_count, first_attempt, last_attempt, 
+             category, difficulty, next_review, interval_days, ease_factor)
+            VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?)
           `;
           
           this.db.run(insertSql, [
-            userId, questionId, isCorrect ? 1 : 0, now, now, category, difficulty, nextReview
+            userId, questionId, isCorrect ? 1 : 0, now, now, 
+            category, difficulty, nextReview, newInterval, newEaseFactor
           ], (err) => {
             if (err) {
               reject(err);
@@ -221,44 +231,105 @@ class Database {
     });
   }
 
-  calculateNextReview(currentProgress, isCorrect) {
-    if (!currentProgress) {
-      // First attempt
-      return new Date(Date.now() + (isCorrect ? 1 : 0.5) * 24 * 60 * 60 * 1000).toISOString();
-    }
+  // Enhanced update method with spaced repetition
+  async updateUserProgressWithSpacedRepetition(userId, questionId, isCorrect, category, difficulty, easeFactor, interval, nextReview) {
+    return new Promise((resolve, reject) => {
+      const selectSql = `SELECT * FROM user_progress WHERE user_id = ? AND question_id = ?`;
+      
+      this.db.get(selectSql, [userId, questionId], (err, row) => {
+        if (err) {
+          reject(err);
+          return;
+        }
 
-    const intervals = [1, 3, 7, 14, 30, 90]; // days
-    let currentInterval = currentProgress.interval_days || 1;
-    let easeFactor = currentProgress.ease_factor || 2.5;
+        const now = new Date().toISOString();
+        
+        if (row) {
+          // Update existing progress
+          const newAttempts = row.attempts + 1;
+          const newCorrect = row.correct_count + (isCorrect ? 1 : 0);
+          
+          const updateSql = `
+            UPDATE user_progress 
+            SET attempts = ?, correct_count = ?, last_attempt = ?, 
+                next_review = ?, interval_days = ?, ease_factor = ?
+            WHERE user_id = ? AND question_id = ?
+          `;
+          
+          this.db.run(updateSql, [
+            newAttempts, newCorrect, now, nextReview, interval, easeFactor,
+            userId, questionId
+          ], (err) => {
+            if (err) {
+              reject(err);
+            } else {
+              resolve();
+            }
+          });
+        } else {
+          // Create new progress record
+          const insertSql = `
+            INSERT INTO user_progress 
+            (user_id, question_id, attempts, correct_count, first_attempt, last_attempt, 
+             category, difficulty, next_review, interval_days, ease_factor)
+            VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?)
+          `;
+          
+          this.db.run(insertSql, [
+            userId, questionId, isCorrect ? 1 : 0, now, now,
+            category, difficulty, nextReview, interval, easeFactor
+          ], (err) => {
+            if (err) {
+              reject(err);
+            } else {
+              resolve();
+            }
+          });
+        }
+      });
+    });
+  }
 
-    if (isCorrect) {
-      // Increase interval
-      const nextIntervalIndex = Math.min(
-        intervals.findIndex(i => i > currentInterval) + 1,
-        intervals.length - 1
-      );
-      currentInterval = intervals[nextIntervalIndex] || currentInterval * easeFactor;
-      easeFactor = Math.max(1.3, easeFactor + 0.1);
+  calculateSpacedRepetition(currentProgress, isCorrect) {
+    let interval = 1;
+    let easeFactor = 2.5;
+    
+    if (currentProgress) {
+      interval = currentProgress.interval_days || 1;
+      easeFactor = currentProgress.ease_factor || 2.5;
+      
+      if (isCorrect) {
+        // SM-2 algorithm: increase interval
+        interval = Math.round(interval * easeFactor);
+        easeFactor = Math.min(easeFactor + 0.1, 3.0);
+      } else {
+        // Failed: reset interval
+        interval = 1;
+        easeFactor = Math.max(easeFactor - 0.3, 1.3);
+      }
     } else {
-      // Reset to shorter interval
-      currentInterval = Math.max(1, currentInterval * 0.5);
-      easeFactor = Math.max(1.3, easeFactor - 0.2);
+      // First time seeing this question
+      interval = isCorrect ? 1 : 0.5;
     }
-
-    return new Date(Date.now() + currentInterval * 24 * 60 * 60 * 1000).toISOString();
+    
+    // Calculate next review date
+    const nextReview = new Date();
+    nextReview.setDate(nextReview.getDate() + interval);
+    
+    return {
+      nextReview: nextReview.toISOString(),
+      newInterval: interval,
+      newEaseFactor: easeFactor
+    };
   }
 
   async getUserProgress(userId) {
     return new Promise((resolve, reject) => {
       const sql = `
-        SELECT category, 
-               COUNT(*) as total_questions,
-               SUM(CASE WHEN attempts > 0 THEN 1 ELSE 0 END) as attempted,
-               SUM(correct_count) as total_correct,
-               SUM(attempts) as total_attempts
+        SELECT question_id, attempts, correct_count, last_attempt, 
+               category, difficulty, next_review, ease_factor, interval_days
         FROM user_progress 
-        WHERE user_id = ? 
-        GROUP BY category
+        WHERE user_id = ?
       `;
       
       this.db.all(sql, [userId], (err, rows) => {
@@ -268,6 +339,101 @@ class Database {
           resolve(rows);
         }
       });
+    });
+  }
+
+  async getDueQuestions(userId) {
+    return new Promise((resolve, reject) => {
+      const sql = `
+        SELECT question_id, category, difficulty, next_review, ease_factor, interval_days
+        FROM user_progress 
+        WHERE user_id = ? AND next_review <= datetime('now')
+        ORDER BY next_review ASC
+        LIMIT 50
+      `;
+      
+      this.db.all(sql, [userId], (err, rows) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(rows.map(row => ({ id: row.question_id, ...row })));
+        }
+      });
+    });
+  }
+
+  async getUserStatistics(userId) {
+    return new Promise((resolve, reject) => {
+      const statsPromises = [
+        // Total questions answered
+        new Promise((res, rej) => {
+          this.db.get(
+            `SELECT SUM(attempts) as total_attempts, 
+                    SUM(correct_count) as total_correct
+             FROM user_progress WHERE user_id = ?`,
+            [userId],
+            (err, row) => err ? rej(err) : res(row)
+          );
+        }),
+        
+        // Category breakdown
+        new Promise((res, rej) => {
+          this.db.all(
+            `SELECT category, 
+                    COUNT(*) as questions_seen,
+                    SUM(attempts) as attempts,
+                    SUM(correct_count) as correct,
+                    AVG(ease_factor) as avg_ease_factor
+             FROM user_progress 
+             WHERE user_id = ? 
+             GROUP BY category`,
+            [userId],
+            (err, rows) => err ? rej(err) : res(rows)
+          );
+        }),
+        
+        // Study sessions
+        new Promise((res, rej) => {
+          this.db.all(
+            `SELECT COUNT(*) as total_sessions,
+                    AVG(questions_answered) as avg_questions_per_session,
+                    AVG(CAST(correct_answers AS FLOAT) / NULLIF(questions_answered, 0)) as avg_accuracy
+             FROM study_sessions 
+             WHERE user_id = ? AND ended_at IS NOT NULL`,
+            [userId],
+            (err, row) => err ? rej(err) : res(row)
+          );
+        }),
+        
+        // Questions due
+        new Promise((res, rej) => {
+          this.db.get(
+            `SELECT COUNT(*) as questions_due
+             FROM user_progress 
+             WHERE user_id = ? AND next_review <= datetime('now')`,
+            [userId],
+            (err, row) => err ? rej(err) : res(row)
+          );
+        })
+      ];
+      
+      Promise.all(statsPromises)
+        .then(([totals, categories, sessions, due]) => {
+          const accuracy = totals.total_attempts > 0 
+            ? Math.round((totals.total_correct / totals.total_attempts) * 100) 
+            : 0;
+            
+          resolve({
+            totalQuestionsAnswered: totals.total_attempts || 0,
+            totalCorrect: totals.total_correct || 0,
+            overallAccuracy: accuracy,
+            categoryBreakdown: categories,
+            sessionStats: sessions,
+            questionsDue: due.questions_due || 0,
+            lastStudied: new Date().toISOString() // This could be improved
+          });
+        })
+        .catch(reject);
     });
   }
 
@@ -324,6 +490,29 @@ class Database {
           reject(err);
         } else {
           resolve();
+        }
+      });
+    });
+  }
+
+  async recordPlacementTest(userId, totalQuestions, correctAnswers, categoryScores, determinedLevel) {
+    return new Promise((resolve, reject) => {
+      const sql = `
+        INSERT INTO placement_tests (user_id, total_questions, correct_answers, category_scores, determined_level)
+        VALUES (?, ?, ?, ?, ?)
+      `;
+      
+      this.db.run(sql, [
+        userId, 
+        totalQuestions, 
+        correctAnswers, 
+        JSON.stringify(categoryScores), 
+        determinedLevel
+      ], function(err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(this.lastID);
         }
       });
     });
