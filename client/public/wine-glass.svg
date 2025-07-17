@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <defs>
+    <linearGradient id="wineGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6b46c1;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#9333ea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#dc2626;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Wine glass bowl -->
+  <path d="M25 20 Q25 15 30 15 L70 15 Q75 15 75 20 L70 45 Q70 55 60 60 L55 60 L55 75 L65 75 Q70 75 70 80 Q70 85 65 85 L35 85 Q30 85 30 80 Q30 75 35 75 L45 75 L45 60 L40 60 Q30 55 30 45 Z" 
+        fill="url(#wineGradient)" 
+        stroke="#4a5568" 
+        stroke-width="2"/>
+  
+  <!-- Wine liquid -->
+  <path d="M32 22 L68 22 L65 42 Q65 48 58 52 L42 52 Q35 48 35 42 Z" 
+        fill="#dc2626" 
+        opacity="0.8"/>
+  
+  <!-- Highlight on glass -->
+  <ellipse cx="40" cy="30" rx="8" ry="15" fill="#ffffff" opacity="0.3"/>
+  
+  <!-- Bubbles -->
+  <circle cx="45" cy="35" r="1.5" fill="#ffffff" opacity="0.6"/>
+  <circle cx="52" cy="40" r="1" fill="#ffffff" opacity="0.5"/>
+  <circle cx="48" cy="28" r="0.8" fill="#ffffff" opacity="0.7"/>
+</svg>

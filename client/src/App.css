@@ -1,0 +1,176 @@
+/* SipSchool Custom Styles */
+
+/* Wine glass animation for loading states */
+.wine-glass-animation {
+    animation: wine-pour 2s ease-in-out infinite;
+  }
+  
+  /* Card flip animation for flashcards */
+  .card-flip {
+    transition: transform 0.6s;
+    transform-style: preserve-3d;
+  }
+  
+  .card-flip.flipped {
+    transform: rotateY(180deg);
+  }
+  
+  .card-face {
+    backface-visibility: hidden;
+  }
+  
+  .card-face.back {
+    transform: rotateY(180deg);
+  }
+  
+  /* Progress bar animation */
+  .progress-bar {
+    transition: width 0.5s ease-in-out;
+  }
+  
+  /* Smooth color transitions for difficulty badges */
+  .difficulty-badge {
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .difficulty-badge:hover {
+    transform: scale(1.05);
+  }
+  
+  /* Category filter buttons */
+  .category-button {
+    transition: all 0.2s ease-in-out;
+  }
+  
+  .category-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  .category-button.active {
+    transform: scale(1.02);
+    box-shadow: 0 4px 20px rgba(139, 69, 19, 0.3);
+  }
+  
+  /* Wine-themed gradient backgrounds */
+  .wine-gradient {
+    background: linear-gradient(135deg, #6b46c1 0%, #9333ea 25%, #c026d3 50%, #e11d48 75%, #dc2626 100%);
+  }
+  
+  .grape-gradient {
+    background: linear-gradient(135deg, #1e293b 0%, #475569 50%, #64748b 100%);
+  }
+  
+  /* Floating animation for wine glass icon */
+  .floating {
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+  
+  /* Question card shadows */
+  .question-card {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .question-card:hover {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    transform: translateY(-2px);
+  }
+  
+  /* Stats cards */
+  .stats-card {
+    background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid rgba(139, 69, 19, 0.1);
+  }
+  
+  /* Loading spinner */
+  .wine-spinner {
+    border: 3px solid rgba(139, 69, 19, 0.3);
+    border-radius: 50%;
+    border-top: 3px solid #8b4513;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  /* Success/error states */
+  .success-pulse {
+    animation: success-pulse 2s ease-in-out;
+  }
+  
+  .error-shake {
+    animation: error-shake 0.5s ease-in-out;
+  }
+  
+  @keyframes success-pulse {
+    0%, 100% {
+      background-color: #10b981;
+    }
+    50% {
+      background-color: #059669;
+    }
+  }
+  
+  @keyframes error-shake {
+    0%, 100% {
+      transform: translateX(0);
+    }
+    25% {
+      transform: translateX(-5px);
+    }
+    75% {
+      transform: translateX(5px);
+    }
+  }
+  
+  /* Mobile optimizations */
+  @media (max-width: 640px) {
+    .wine-glass-animation {
+      animation-duration: 1.5s;
+    }
+    
+    .question-card {
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .category-button {
+      font-size: 0.875rem;
+      padding: 0.5rem 0.75rem;
+    }
+  }
+  
+  /* High DPI display optimizations */
+  @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .wine-gradient {
+      background-attachment: fixed;
+    }
+  }
+  
+  /* Reduced motion for accessibility */
+  @media (prefers-reduced-motion: reduce) {
+    .wine-glass-animation,
+    .floating,
+    .wine-spinner {
+      animation: none;
+    }
+    
+    .question-card,
+    .category-button,
+    .difficulty-badge {
+      transition: none;
+    }
+  }
