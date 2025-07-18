@@ -64,18 +64,16 @@ function AppContent() {
   // Load progress and questions when user changes
   useEffect(() => {
     if (user) {
-      // Check for placement test
-      if (isAuthenticated && !localStorage.getItem('sipschool_placement_completed')) {
-        setShowPlacementTest(true);
+      // Check for placement test and load user profile
+      if (isAuthenticated) {
+        loadUserProfile();
+        startNewSession();
       } else {
         setUserLevel(localStorage.getItem('sipschool_level') || 'intermediate');
       }
       
       loadUserProgress();
       fetchQuestions();
-      if (isAuthenticated) {
-        startNewSession();
-      }
     }
   }, [user]);
 
@@ -85,6 +83,25 @@ function AppContent() {
       saveLocalProgress();
     }
   }, [userProgress, studyHistory]);
+
+  const loadUserProfile = async () => {
+    try {
+      const response = await fetch('/api/user/profile', {
+        headers: getAuthHeaders()
+      });
+      
+      if (response.ok) {
+        const profile = await response.json();
+        if (!profile.placementCompleted) {
+          setShowPlacementTest(true);
+        } else {
+          setUserLevel(profile.placementLevel || 'intermediate');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load user profile:', error);
+    }
+  };
 
   const startNewSession = async () => {
     try {

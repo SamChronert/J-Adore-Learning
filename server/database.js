@@ -44,7 +44,10 @@ class Database {
           email TEXT,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           last_login DATETIME,
-          settings JSON DEFAULT '{}'
+          settings JSON DEFAULT '{}',
+          placement_completed BOOLEAN DEFAULT FALSE,
+          placement_level TEXT,
+          placement_score INTEGER
         )`,
 
         // User progress table - Enhanced with spaced repetition fields
@@ -161,6 +164,32 @@ class Database {
           reject(err);
         } else {
           resolve();
+        }
+      });
+    });
+  }
+
+  async updatePlacementTestStatus(userId, completed, level = null, score = null) {
+    return new Promise((resolve, reject) => {
+      const sql = `UPDATE users SET placement_completed = ?, placement_level = ?, placement_score = ? WHERE id = ?`;
+      this.db.run(sql, [completed ? 1 : 0, level, score, userId], (err) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    });
+  }
+
+  async getUserById(userId) {
+    return new Promise((resolve, reject) => {
+      const sql = `SELECT * FROM users WHERE id = ?`;
+      this.db.get(sql, [userId], (err, row) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(row);
         }
       });
     });
