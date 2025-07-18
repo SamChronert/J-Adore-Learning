@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { UserProvider, useUser } from './contexts/UserContext';
 import AuthScreen from './components/AuthScreen';
 import UserHeader from './components/UserHeader';
+import QuestionCard from './components/QuestionCard';
 import './App.css';
 
 function AppContent() {
@@ -12,6 +13,7 @@ function AppContent() {
   const [userAnswer, setUserAnswer] = useState('');
   const [attemptCount, setAttemptCount] = useState(0);
   const [showHint, setShowHint] = useState(false);
+  const [currentHint, setCurrentHint] = useState('');
   const [feedback, setFeedback] = useState('');
   const [score, setScore] = useState({ correct: 0, total: 0 });
   const [isComplete, setIsComplete] = useState(false);
@@ -257,36 +259,71 @@ function AppContent() {
       return question.hints[attemptNumber];
     }
     
-    // Generate generic hints based on answer
+    // Generate progressive hints based on answer and question type
     const answer = question.answer;
     const answerLength = answer.length;
     const firstLetter = answer[0].toUpperCase();
+    const words = answer.split(' ');
     
+    // Hint Level 1: Contextual/Educational hint
     if (attemptNumber === 0) {
-      // First hint - very general
-      if (question.category === 'Wine Regions') {
-        return `Think about the geography and climate of ${question.region || 'this region'}.`;
-      } else if (question.category === 'Grape Varieties') {
-        return `This grape variety starts with "${firstLetter}" and has ${answerLength} letters.`;
-      } else {
-        return `The answer starts with "${firstLetter}" and is ${answerLength} letters long.`;
+      // Category-specific educational hints
+      switch (question.category) {
+        case 'Wine Regions':
+          if (question.region) {
+            return `Think about the key characteristics of ${question.region}. What makes this region unique in the wine world?`;
+          }
+          return `Consider the country, climate, and wine styles associated with this region.`;
+          
+        case 'Grape Varieties':
+          if (words.length > 1) {
+            return `This is a ${words.length}-word answer. Think about grape varieties that might be hyphenated or have multiple parts.`;
+          }
+          return `This grape variety starts with "${firstLetter}". Consider if it's a red or white grape based on the context.`;
+          
+        case 'Winemaking':
+          return `Think about the winemaking process mentioned. What technique or term is commonly used in this context?`;
+          
+        case 'Viticulture':
+          return `Consider the vineyard practices or growing conditions. The answer relates to how grapes are cultivated.`;
+          
+        case 'Wine Service':
+          return `Think about proper wine service etiquette or temperature. What's the professional standard here?`;
+          
+        case 'Food Pairing':
+          return `Consider the flavors and textures. What wine characteristic would complement this dish?`;
+          
+        default:
+          return `The answer has ${answerLength} letters and starts with "${firstLetter}". Think about the context of the question.`;
       }
-    } else if (attemptNumber === 1) {
-      // Second hint - more specific
-      const lastLetter = answer[answer.length - 1];
-      if (answer.includes(' ')) {
-        const words = answer.split(' ');
-        return `It's ${words.length} words. The first word starts with "${firstLetter}".`;
+    }
+    
+    // Hint Level 2: Structural hint
+    else if (attemptNumber === 1) {
+      if (words.length > 1) {
+        const wordLengths = words.map(w => w.length).join('-');
+        return `It's ${words.length} words with this pattern: ${wordLengths} letters. The first word starts with "${firstLetter}".`;
+      } else if (answer.match(/[éèêëàâäôöûü]/)) {
+        return `This is a ${answerLength}-letter word starting with "${firstLetter}". Note: it contains accented characters.`;
       } else {
-        return `It starts with "${firstLetter}" and ends with "${lastLetter}".`;
+        const vowelCount = answer.match(/[aeiou]/gi)?.length || 0;
+        return `Single word: ${answerLength} letters, starts with "${firstLetter}", contains ${vowelCount} vowels.`;
       }
-    } else {
-      // Final hint - very revealing
-      if (answer.length > 5) {
-        const hint = answer.substring(0, 3) + '...';
-        return `The answer begins with "${hint}"`;
+    }
+    
+    // Hint Level 3: Revealing hint
+    else {
+      if (words.length > 1) {
+        // For multi-word answers, reveal first word
+        return `The answer begins with "${words[0]}..." (${words.length} words total)`;
+      } else if (answer.length > 6) {
+        // For long single words, show first 3-4 letters
+        const revealLength = Math.min(4, Math.floor(answer.length / 2));
+        return `The answer begins with "${answer.substring(0, revealLength)}..." (${answerLength} letters total)`;
       } else {
-        return `It's a short answer: ${answer.length} letters starting with "${firstLetter}".`;
+        // For short words, show first and last letter with blanks
+        const blanks = '_'.repeat(Math.max(1, answer.length - 2));
+        return `The answer is: ${firstLetter}${blanks}${answer[answer.length - 1]}`;
       }
     }
   };
@@ -304,6 +341,8 @@ function AppContent() {
     if (isCorrect) {
       setScore({ ...score, correct: score.correct + 1, total: score.total + 1 });
       setShowAnswer(true);
+      setShowHint(false);
+      setCurrentHint('');
       setFeedback('Correct! Well done! 🎉');
       updateProgress(question.id, true, attemptCount + 1);
       
@@ -312,19 +351,36 @@ function AppContent() {
         handleNext();
       }, 2000);
     } else {
-      setAttemptCount(attemptCount + 1);
+      const newAttemptCount = attemptCount + 1;
+      setAttemptCount(newAttemptCount);
       
-      if (attemptCount === 0) {
-        setFeedback('Not quite. Try again! 🤔');
+      if (newAttemptCount === 1) {
+        setFeedback('Not quite right. Here\'s a hint to help you!');
+        const hint = generateHint(question, 0);
+        setCurrentHint(hint);
         setShowHint(true);
-      } else if (attemptCount === 1) {
+      } else if (newAttemptCount === 2) {
         setFeedback('Still not right. Here\'s another hint:');
+        const hint = generateHint(question, 1);
+        setCurrentHint(hint);
         setShowHint(true);
-      } else {
+      } else if (newAttemptCount === 3) {
+        setFeedback('Last chance! Here\'s a big hint:');
+        const hint = generateHint(question, 2);
+        setCurrentHint(hint);
+        setShowHint(true);
+      } else if (newAttemptCount >= 4) {
         setFeedback('Let me show you the answer:');
         setShowAnswer(true);
+        setShowHint(false);
+        setCurrentHint('');
         setScore({ ...score, total: score.total + 1 });
-        updateProgress(question.id, false, attemptCount + 1);
+        updateProgress(question.id, false, newAttemptCount);
+      }
+      
+      // Clear the input for another attempt
+      if (!showAnswer) {
+        setUserAnswer('');
       }
     }
   };
@@ -416,6 +472,7 @@ function AppContent() {
     setUserAnswer('');
     setAttemptCount(0);
     setShowHint(false);
+    setCurrentHint('');
     setFeedback('');
     
     if (currentQuestion + 1 >= filteredQuestions.length) {
@@ -461,6 +518,7 @@ function AppContent() {
     setUserAnswer('');
     setAttemptCount(0);
     setShowHint(false);
+    setCurrentHint('');
     setFeedback('');
     setScore({ correct: 0, total: 0 });
     setIsComplete(false);
@@ -766,95 +824,27 @@ function AppContent() {
             </div>
 
             {/* Question Card */}
-            <div className="bg-white rounded-xl shadow-2xl p-8 mb-6">
-              <div className="mb-4">
-                <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                  currentQ?.difficulty === 'basic' 
-                    ? 'bg-green-100 text-green-800'
-                    : currentQ?.difficulty === 'intermediate'
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : 'bg-red-100 text-red-800'
-                }`}>
-                  {currentQ?.category}
-                </span>
-              </div>
-              
-              <h2 className="text-2xl font-bold text-gray-800 mb-6">
-                {currentQ?.question}
-              </h2>
-
-              {showHint && !showAnswer && (
-                <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-blue-700">
-                    💡 Hint: {generateHint(currentQ, attemptCount - 1)}
-                  </p>
-                </div>
-              )}
-
-              {feedback && (
-                <div className={`mb-4 p-3 rounded-lg ${
-                  feedback.includes('Correct') ? 'bg-green-50 text-green-700' : 
-                  feedback.includes('show you') ? 'bg-red-50 text-red-700' :
-                  'bg-yellow-50 text-yellow-700'
-                }`}>
-                  <p className="text-sm font-medium">{feedback}</p>
-                </div>
-              )}
-
-              {showAnswer ? (
-                <div className="space-y-4">
-                  <div className="p-4 bg-purple-50 rounded-lg border-l-4 border-purple-500">
-                    <p className="text-gray-800 font-medium">
-                      {currentQ?.answer}
-                    </p>
-                  </div>
-                  {currentQ?.explanation && (
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <p className="text-sm text-gray-600">
-                        <strong>Learn more:</strong> {currentQ?.explanation}
-                      </p>
-                    </div>
-                  )}
-                  <button
-                    onClick={handleNext}
-                    className="w-full px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors"
-                  >
-                    Next Question →
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <input
-                    type="text"
-                    value={userAnswer}
-                    onChange={(e) => setUserAnswer(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Type your answer..."
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none transition-all duration-200"
-                    autoFocus
-                  />
-                  <button
-                    onClick={handleSubmitAnswer}
-                    className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-red-600 text-white rounded-lg font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-200"
-                  >
-                    Submit Answer
-                  </button>
-                  {attemptCount > 0 && !showAnswer && (
-                    <button
-                      onClick={() => {
-                        setShowAnswer(true);
-                        setFeedback('Here\'s the answer:');
-                        setScore({ ...score, total: score.total + 1 });
-                        updateProgress(currentQ.id, false, attemptCount);
-                      }}
-                      className="w-full py-2 text-gray-600 hover:text-gray-800 text-sm"
-                    >
-                      Give up & show answer
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
+            <QuestionCard
+              question={currentQ}
+              userAnswer={userAnswer}
+              setUserAnswer={setUserAnswer}
+              showAnswer={showAnswer}
+              showHint={showHint}
+              currentHint={currentHint}
+              feedback={feedback}
+              attemptCount={attemptCount}
+              onSubmit={handleSubmitAnswer}
+              onNext={handleNext}
+              onGiveUp={() => {
+                setShowAnswer(true);
+                setShowHint(false);
+                setCurrentHint('');
+                setFeedback('Here\'s the answer:');
+                setScore({ ...score, total: score.total + 1 });
+                updateProgress(currentQ.id, false, attemptCount);
+              }}
+              onKeyPress={handleKeyPress}
+            />
 
             {/* Quick Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
