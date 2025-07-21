@@ -105,6 +105,22 @@ class Database {
           category_scores JSON,
           determined_level TEXT,
           FOREIGN KEY (user_id) REFERENCES users(id)
+        )`,
+
+        // Question feedback table
+        `CREATE TABLE IF NOT EXISTS question_feedback (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          question_id TEXT NOT NULL,
+          question_type TEXT DEFAULT 'static', -- 'static' or 'ai_generated'
+          rating INTEGER CHECK (rating >= 1 AND rating <= 5),
+          feedback_type TEXT, -- 'difficulty', 'clarity', 'answer_issue', 'other'
+          comment TEXT,
+          is_flagged BOOLEAN DEFAULT FALSE,
+          admin_reviewed BOOLEAN DEFAULT FALSE,
+          admin_notes TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id)
         )`
       ];
 
@@ -542,6 +558,180 @@ class Database {
           reject(err);
         } else {
           resolve(this.lastID);
+        }
+      });
+    });
+  }
+
+  // Feedback methods
+  async submitFeedback(userId, questionId, questionType, rating, feedbackType, comment) {
+    return new Promise((resolve, reject) => {
+      const sql = `
+        INSERT INTO question_feedback 
+        (user_id, question_id, question_type, rating, feedback_type, comment)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `;
+      
+      this.db.run(sql, [userId, questionId, questionType, rating, feedbackType, comment], function(err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(this.lastID);
+        }
+      });
+    });
+  }
+
+  async getFeedbackForQuestion(questionId) {
+    return new Promise((resolve, reject) => {
+      const sql = `
+        SELECT 
+          qf.*,
+          u.username
+        FROM question_feedback qf
+        JOIN users u ON qf.user_id = u.id
+        WHERE qf.question_id = ?
+        ORDER BY qf.created_at DESC
+      `;
+      
+      this.db.all(sql, [questionId], (err, rows) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(rows);
+        }
+      });
+    });
+  }
+
+  async getAllFeedback(filters = {}) {
+    return new Promise((resolve, reject) => {
+      let sql = `
+        SELECT 
+          qf.*,
+          u.username
+        FROM question_feedback qf
+        JOIN users u ON qf.user_id = u.id
+        WHERE 1=1
+      `;
+      const params = [];
+
+      if (filters.isUnreviewed) {
+        sql += ' AND qf.admin_reviewed = FALSE';
+      }
+      if (filters.isFlagged) {
+        sql += ' AND qf.is_flagged = TRUE';
+      }
+      if (filters.feedbackType) {
+        sql += ' AND qf.feedback_type = ?';
+        params.push(filters.feedbackType);
+      }
+      if (filters.minRating) {
+        sql += ' AND qf.rating <= ?';
+        params.push(filters.minRating);
+      }
+
+      sql += ' ORDER BY qf.created_at DESC';
+
+      if (filters.limit) {
+        sql += ' LIMIT ?';
+        params.push(filters.limit);
+      }
+      
+      this.db.all(sql, params, (err, rows) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(rows);
+        }
+      });
+    });
+  }
+
+  async getFeedbackStats() {
+    return new Promise((resolve, reject) => {
+      const sql = `
+        SELECT 
+          COUNT(*) as total_feedback,
+          AVG(rating) as average_rating,
+          COUNT(CASE WHEN is_flagged = TRUE THEN 1 END) as flagged_count,
+          COUNT(CASE WHEN admin_reviewed = FALSE THEN 1 END) as unreviewed_count,
+          COUNT(CASE WHEN feedback_type = 'answer_issue' THEN 1 END) as answer_issues,
+          COUNT(CASE WHEN feedback_type = 'difficulty' THEN 1 END) as difficulty_feedback,
+          COUNT(CASE WHEN feedback_type = 'clarity' THEN 1 END) as clarity_feedback
+        FROM question_feedback
+      `;
+      
+      this.db.get(sql, (err, row) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(row);
+        }
+      });
+    });
+  }
+
+  async markFeedbackReviewed(feedbackId, adminNotes = null) {
+    return new Promise((resolve, reject) => {
+      const sql = `
+        UPDATE question_feedback 
+        SET admin_reviewed = TRUE, admin_notes = ?
+        WHERE id = ?
+      `;
+      
+      this.db.run(sql, [adminNotes, feedbackId], (err) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    });
+  }
+
+  async toggleFeedbackFlag(feedbackId) {
+    return new Promise((resolve, reject) => {
+      const sql = `
+        UPDATE question_feedback 
+        SET is_flagged = NOT is_flagged
+        WHERE id = ?
+      `;
+      
+      this.db.run(sql, [feedbackId], (err) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    });
+  }
+
+  // API Key management
+  async updateUserApiKey(userId, encryptedApiKey) {
+    return new Promise((resolve, reject) => {
+      const sql = `UPDATE users SET api_key_encrypted = ? WHERE id = ?`;
+      
+      this.db.run(sql, [encryptedApiKey, userId], (err) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    });
+  }
+
+  async getUserApiKey(userId) {
+    return new Promise((resolve, reject) => {
+      const sql = `SELECT api_key_encrypted FROM users WHERE id = ?`;
+      
+      this.db.get(sql, [userId], (err, row) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(row?.api_key_encrypted || null);
         }
       });
     });

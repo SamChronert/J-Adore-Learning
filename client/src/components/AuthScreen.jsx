@@ -4,9 +4,10 @@ import { useUser } from '../contexts/UserContext';
 
 function AuthScreen({ onAuthSuccess }) {
   const [mode, setMode] = useState('login');
-  const { continueAsGuest } = useUser();
+  const { continueAsGuest, login } = useUser();
 
   const handleAuthSuccess = (user, token) => {
+    login(user, token);
     onAuthSuccess();
   };
 

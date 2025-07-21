@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import api from '../services/api';
 
 const UserContext = createContext(null);
 
@@ -15,6 +16,7 @@ export function UserProvider({ children }) {
     if (savedToken && savedUser) {
       setToken(savedToken);
       setUser(JSON.parse(savedUser));
+      api.setToken(savedToken);
       
       // Verify token is still valid
       verifyToken(savedToken);
@@ -50,6 +52,7 @@ export function UserProvider({ children }) {
   const login = (userData, userToken) => {
     setUser(userData);
     setToken(userToken);
+    api.setToken(userToken);
     localStorage.setItem('sipschool_token', userToken);
     localStorage.setItem('sipschool_user', JSON.stringify(userData));
   };
@@ -57,6 +60,7 @@ export function UserProvider({ children }) {
   const logout = () => {
     setUser(null);
     setToken(null);
+    api.setToken(null);
     localStorage.removeItem('sipschool_token');
     localStorage.removeItem('sipschool_user');
     localStorage.removeItem('sipschool_progress'); // Clear old progress

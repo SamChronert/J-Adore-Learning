@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { UserProvider, useUser } from './contexts/UserContext';
 import AuthScreen from './components/AuthScreen';
 import UserHeader from './components/UserHeader';
 import QuestionCard from './components/QuestionCard';
+import AdminDashboard from './components/AdminDashboard';
+import Profile from './components/Profile';
+import HintButton from './components/HintButton';
+import ApiKeyNotification from './components/ApiKeyNotification';
+import api from './services/api';
 import './App.css';
 
 function AppContent() {
@@ -11,9 +17,10 @@ function AppContent() {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [userAnswer, setUserAnswer] = useState('');
-  const [attemptCount, setAttemptCount] = useState(0);
+  const [hasAttempted, setHasAttempted] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [currentHint, setCurrentHint] = useState('');
+  const [hasUsedHint, setHasUsedHint] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [score, setScore] = useState({ correct: 0, total: 0 });
   const [isComplete, setIsComplete] = useState(false);
@@ -27,6 +34,14 @@ function AppContent() {
   const [userProgress, setUserProgress] = useState({});
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [studyHistory, setStudyHistory] = useState([]);
+  
+  // AI-related state
+  const [useAI, setUseAI] = useState(true);
+  const [aiQuestionCache, setAiQuestionCache] = useState([]);
+  const [isGeneratingQuestion, setIsGeneratingQuestion] = useState(false);
+  
+  // Admin state
+  const [showAdminDashboard, setShowAdminDashboard] = useState(false);
 
   // Answer variations database for intelligent matching
   const answerVariations = {
@@ -201,16 +216,60 @@ function AppContent() {
 
   const fetchQuestions = async () => {
     try {
-      const response = await fetch('/api/questions');
-      if (!response.ok) throw new Error('Failed to fetch questions');
-      
-      const questionsData = await response.json();
+      const questionsData = await api.getQuestions();
       setQuestions(questionsData);
       setLoading(false);
     } catch (err) {
       setError('Failed to load questions. Please try again.');
       setLoading(false);
     }
+  };
+
+  const generateAIQuestion = async () => {
+    if (!useAI || !isAuthenticated) return null;
+    
+    setIsGeneratingQuestion(true);
+    try {
+      // Analyze user weaknesses
+      const { weaknesses } = api.analyzeUserWeaknesses(userProgress);
+      
+      // Select category - prefer weak areas or random
+      const availableCategories = [...new Set(questions.map(q => q.category))];
+      const targetCategory = weaknesses.length > 0 
+        ? weaknesses[Math.floor(Math.random() * weaknesses.length)]
+        : availableCategories[Math.floor(Math.random() * availableCategories.length)];
+      
+      // Determine difficulty based on user level
+      const difficulty = userLevel || 'intermediate';
+      
+      // Generate question
+      const aiQuestion = await api.generateQuestion(targetCategory, difficulty, weaknesses);
+      
+      if (aiQuestion && !aiQuestion.fallback) {
+        // Add to cache and questions array
+        const questionWithId = {
+          ...aiQuestion,
+          id: `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          generated: true,
+          hints: aiQuestion.hints || [
+            `Think about ${aiQuestion.category}`,
+            `The answer relates to ${aiQuestion.explanation?.split('.')[0]}`,
+            `It starts with "${aiQuestion.answer.charAt(0).toUpperCase()}"`
+          ]
+        };
+        
+        setAiQuestionCache(prev => [...prev, questionWithId]);
+        setQuestions(prev => [...prev, questionWithId]);
+        
+        return questionWithId;
+      }
+    } catch (error) {
+      console.error('Failed to generate AI question:', error);
+    } finally {
+      setIsGeneratingQuestion(false);
+    }
+    
+    return null;
   };
 
   // Normalize answer for comparison
@@ -345,6 +404,15 @@ function AppContent() {
     }
   };
 
+  // Handle hint request
+  const handleHintRequest = () => {
+    const question = getNextQuestion();
+    const hint = generateHint(question, 0);
+    setCurrentHint(hint);
+    setShowHint(true);
+    setHasUsedHint(true);
+  };
+
   // Handle answer submission
   const handleSubmitAnswer = () => {
     if (!userAnswer.trim()) {
@@ -352,8 +420,14 @@ function AppContent() {
       return;
     }
 
+    // Only allow one attempt
+    if (hasAttempted) {
+      return;
+    }
+
     const question = getNextQuestion();
     const isCorrect = checkAnswer(userAnswer, question.answer);
+    setHasAttempted(true);
     
     if (isCorrect) {
       setScore({ ...score, correct: score.correct + 1, total: score.total + 1 });
@@ -361,44 +435,19 @@ function AppContent() {
       setShowHint(false);
       setCurrentHint('');
       setFeedback('Correct! Well done! 🎉');
-      updateProgress(question.id, true, attemptCount + 1);
+      updateProgress(question.id, true, 1);
       
       // Auto-advance after 2 seconds for correct answers
       setTimeout(() => {
         handleNext();
       }, 2000);
     } else {
-      const newAttemptCount = attemptCount + 1;
-      setAttemptCount(newAttemptCount);
-      
-      if (newAttemptCount === 1) {
-        setFeedback('Not quite right. Here\'s a hint to help you!');
-        const hint = generateHint(question, 0);
-        setCurrentHint(hint);
-        setShowHint(true);
-      } else if (newAttemptCount === 2) {
-        setFeedback('Still not right. Here\'s another hint:');
-        const hint = generateHint(question, 1);
-        setCurrentHint(hint);
-        setShowHint(true);
-      } else if (newAttemptCount === 3) {
-        setFeedback('Last chance! Here\'s a big hint:');
-        const hint = generateHint(question, 2);
-        setCurrentHint(hint);
-        setShowHint(true);
-      } else if (newAttemptCount >= 4) {
-        setFeedback('Let me show you the answer:');
-        setShowAnswer(true);
-        setShowHint(false);
-        setCurrentHint('');
-        setScore({ ...score, total: score.total + 1 });
-        updateProgress(question.id, false, newAttemptCount);
-      }
-      
-      // Clear the input for another attempt
-      if (!showAnswer) {
-        setUserAnswer('');
-      }
+      setFeedback('Not quite right. Here\'s the correct answer:');
+      setShowAnswer(true);
+      setShowHint(false);
+      setCurrentHint('');
+      setScore({ ...score, total: score.total + 1 });
+      updateProgress(question.id, false, 1);
     }
   };
 
@@ -482,17 +531,29 @@ function AppContent() {
     return questions.filter(q => selectedCategories.includes(q.category));
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     const filteredQuestions = getFilteredQuestions();
     
     setShowAnswer(false);
     setUserAnswer('');
-    setAttemptCount(0);
+    setHasAttempted(false);
     setShowHint(false);
     setCurrentHint('');
+    setHasUsedHint(false);
     setFeedback('');
     
     if (currentQuestion + 1 >= filteredQuestions.length) {
+      // Try to generate an AI question if enabled
+      if (useAI && isAuthenticated && !isGeneratingQuestion) {
+        const aiQuestion = await generateAIQuestion();
+        if (aiQuestion) {
+          // Continue with the new AI-generated question
+          setCurrentQuestion(questions.length - 1);
+          return;
+        }
+      }
+      
+      // Otherwise, complete the session
       setIsComplete(true);
       if (isAuthenticated && sessionId) {
         endSession();
@@ -533,9 +594,10 @@ function AppContent() {
     setCurrentQuestion(0);
     setShowAnswer(false);
     setUserAnswer('');
-    setAttemptCount(0);
+    setHasAttempted(false);
     setShowHint(false);
     setCurrentHint('');
+    setHasUsedHint(false);
     setFeedback('');
     setScore({ correct: 0, total: 0 });
     setIsComplete(false);
@@ -755,9 +817,28 @@ function AppContent() {
 
   const currentQ = getNextQuestion();
 
+  // Show admin dashboard if selected
+  if (showAdminDashboard) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-red-800 relative">
+        <UserHeader />
+        <div className="container mx-auto px-4 py-8">
+          <button
+            onClick={() => setShowAdminDashboard(false)}
+            className="mb-4 px-4 py-2 bg-white text-purple-900 rounded-lg hover:bg-gray-100"
+          >
+            ← Back to Questions
+          </button>
+          <AdminDashboard />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-red-800 relative">
       <UserHeader />
+      <ApiKeyNotification />
       
       <div className="container mx-auto px-4 py-8">
         {/* Header with Progress Stats */}
@@ -778,6 +859,16 @@ function AppContent() {
               }
             </p>
           </div>
+          
+          {/* Admin Button */}
+          {isAuthenticated && (
+            <button
+              onClick={() => setShowAdminDashboard(true)}
+              className="mb-4 px-4 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30 text-sm"
+            >
+              📊 Admin Dashboard
+            </button>
+          )}
         </div>
 
         {/* Category Filter */}
@@ -808,6 +899,35 @@ function AppContent() {
               );
             })}
           </div>
+          
+          {/* AI Toggle */}
+          {isAuthenticated && (
+            <div className="flex items-center justify-center gap-3 mt-4 mb-4">
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={useAI}
+                  onChange={(e) => setUseAI(e.target.checked)}
+                  className="sr-only"
+                />
+                <div className={`relative inline-block w-10 h-6 transition duration-200 ease-in-out rounded-full ${
+                  useAI ? 'bg-purple-600' : 'bg-gray-400'
+                }`}>
+                  <span className={`absolute left-0 inline-block w-4 h-4 transition duration-200 ease-in-out transform bg-white rounded-full shadow ${
+                    useAI ? 'translate-x-5' : 'translate-x-1'
+                  } top-1`} />
+                </div>
+                <span className="ml-3 text-white text-sm font-medium">
+                  AI-Generated Questions
+                </span>
+              </label>
+              {useAI && (
+                <span className="text-purple-300 text-xs">
+                  (Personalized based on your progress)
+                </span>
+              )}
+            </div>
+          )}
           
           {selectedCategories.length > 0 && (
             <div className="text-center">
@@ -841,27 +961,31 @@ function AppContent() {
             </div>
 
             {/* Question Card */}
-            <QuestionCard
-              question={currentQ}
-              userAnswer={userAnswer}
-              setUserAnswer={setUserAnswer}
-              showAnswer={showAnswer}
-              showHint={showHint}
-              currentHint={currentHint}
-              feedback={feedback}
-              attemptCount={attemptCount}
-              onSubmit={handleSubmitAnswer}
-              onNext={handleNext}
-              onGiveUp={() => {
-                setShowAnswer(true);
-                setShowHint(false);
-                setCurrentHint('');
-                setFeedback('Here\'s the answer:');
-                setScore({ ...score, total: score.total + 1 });
-                updateProgress(currentQ.id, false, attemptCount);
-              }}
-              onKeyPress={handleKeyPress}
-            />
+            {isGeneratingQuestion ? (
+              <div className="bg-white rounded-xl shadow-2xl p-8 mb-6">
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
+                  <p className="text-gray-600 text-lg">Generating personalized question...</p>
+                  <p className="text-gray-500 text-sm mt-2">Analyzing your learning patterns</p>
+                </div>
+              </div>
+            ) : (
+              <QuestionCard
+                question={currentQ}
+                userAnswer={userAnswer}
+                setUserAnswer={setUserAnswer}
+                showAnswer={showAnswer}
+                showHint={showHint}
+                currentHint={currentHint}
+                feedback={feedback}
+                hasAttempted={hasAttempted}
+                hasUsedHint={hasUsedHint}
+                onSubmit={handleSubmitAnswer}
+                onNext={handleNext}
+                onHintRequest={handleHintRequest}
+                onKeyPress={handleKeyPress}
+              />
+            )}
 
             {/* Quick Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -924,7 +1048,13 @@ function AppContent() {
 function App() {
   return (
     <UserProvider>
-      <AppContent />
+      <Router>
+        <Routes>
+          <Route path="/" element={<AppContent />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
     </UserProvider>
   );
 }

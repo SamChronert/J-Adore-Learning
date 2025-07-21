@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
+import FeedbackModal from './FeedbackModal';
+import HintButton from './HintButton';
 
 const QuestionCard = ({
   question,
@@ -8,18 +10,18 @@ const QuestionCard = ({
   showHint,
   currentHint,
   feedback,
-  attemptCount,
+  hasAttempted,
+  hasUsedHint,
   onSubmit,
   onNext,
-  onGiveUp,
+  onHintRequest,
   onKeyPress
 }) => {
-  const maxAttempts = 4;
-  const attemptsLeft = maxAttempts - attemptCount;
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   const getFeedbackStyle = () => {
     if (feedback.includes('Correct')) return 'bg-green-50 text-green-700 border-green-200';
-    if (feedback.includes('show you')) return 'bg-red-50 text-red-700 border-red-200';
+    if (feedback.includes('correct answer')) return 'bg-red-50 text-red-700 border-red-200';
     return 'bg-yellow-50 text-yellow-700 border-yellow-200';
   };
 
@@ -40,14 +42,35 @@ const QuestionCard = ({
     <div className="bg-white rounded-xl shadow-2xl p-8 mb-6">
       {/* Question Header */}
       <div className="mb-4 flex items-center justify-between">
-        <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getDifficultyStyle()}`}>
-          {question?.category}
-        </span>
-        {!showAnswer && attemptCount > 0 && (
-          <span className="text-sm text-gray-500">
-            {attemptsLeft > 0 ? `${attemptsLeft} attempt${attemptsLeft === 1 ? '' : 's'} left` : 'Last chance!'}
+        <div className="flex items-center gap-2">
+          <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getDifficultyStyle()}`}>
+            {question?.category}
           </span>
-        )}
+          {question?.generated && (
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+              <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              AI Generated
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          {!showAnswer && !hasAttempted && (
+            <span className="text-sm text-gray-500">
+              Single attempt only
+            </span>
+          )}
+          <button
+            onClick={() => setShowFeedbackModal(true)}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            title="Provide feedback"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+          </button>
+        </div>
       </div>
       
       {/* Question Text */}
@@ -55,14 +78,14 @@ const QuestionCard = ({
         {question?.question}
       </h2>
 
-      {/* Progressive Hint Display */}
-      {showHint && !showAnswer && currentHint && (
+      {/* Hint Display */}
+      {showHint && currentHint && (
         <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
           <div className="flex items-start">
             <span className="text-blue-600 mr-2">💡</span>
             <div className="flex-1">
               <p className="text-sm text-blue-700 font-medium mb-1">
-                Hint {attemptCount} of 3:
+                Hint:
               </p>
               <p className="text-sm text-blue-700">{currentHint}</p>
             </div>
@@ -114,53 +137,50 @@ const QuestionCard = ({
               placeholder="Type your answer..."
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none transition-all duration-200"
               autoFocus
-              disabled={showAnswer}
+              disabled={hasAttempted}
             />
-            {attemptCount === 0 && (
+            {!hasAttempted && (
               <p className="text-xs text-gray-500 mt-1">Press Enter to submit</p>
             )}
           </div>
           
-          {/* Submit Button */}
+          {/* Hint Button - Show before attempt */}
+          {!hasAttempted && (
+            <HintButton
+              onClick={onHintRequest}
+              disabled={false}
+              hasUsedHint={hasUsedHint}
+            />
+          )}
+          
+          {/* Submit Button - Disabled after attempt */}
           <button
             onClick={onSubmit}
-            disabled={!userAnswer.trim()}
+            disabled={!userAnswer.trim() || hasAttempted}
             className={`w-full px-6 py-3 rounded-lg font-semibold transition-all duration-200 ${
-              userAnswer.trim()
+              userAnswer.trim() && !hasAttempted
                 ? 'bg-gradient-to-r from-purple-600 to-red-600 text-white hover:shadow-lg transform hover:scale-105'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
           >
-            Submit Answer
+            {hasAttempted ? 'Answer Submitted' : 'Submit Answer'}
           </button>
-          
-          {/* Give Up Button - Only show after first attempt */}
-          {attemptCount > 0 && !showAnswer && (
-            <button
-              onClick={onGiveUp}
-              className="w-full py-2 text-gray-600 hover:text-gray-800 text-sm underline"
-            >
-              I give up - show me the answer
-            </button>
-          )}
         </div>
       )}
 
-      {/* Visual Progress Indicator */}
-      {!showAnswer && attemptCount > 0 && (
-        <div className="mt-4 flex justify-center space-x-2">
-          {[...Array(maxAttempts)].map((_, index) => (
-            <div
-              key={index}
-              className={`h-2 w-8 rounded-full transition-all duration-300 ${
-                index < attemptCount
-                  ? 'bg-red-400'
-                  : 'bg-gray-300'
-              }`}
-            />
-          ))}
+      {/* Status Indicator */}
+      {hasAttempted && !showAnswer && (
+        <div className="mt-4 text-center text-sm text-gray-500">
+          Processing your answer...
         </div>
       )}
+      
+      {/* Feedback Modal */}
+      <FeedbackModal
+        question={question}
+        isOpen={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+      />
     </div>
   );
 };
